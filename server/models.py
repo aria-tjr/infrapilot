@@ -8,7 +8,7 @@ class System(Base):
     __tablename__ = "systems"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), unique=True, indexable=False)
+    name = Column(String(255), unique=True)
     hostname = Column(String(255))
     os_info = Column(String(500))
     ip_address = Column(String(45))
