@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  server:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./infrapilot.db
+      - SECRET_KEY=production-secret-key-change-me
+    volumes:
+      - infrapilot-data:/app/data
+    restart: unless-stopped
+
+  agent:
+    build: .
+    command: python agent/collector.py --server http://server:8000 --interval 30
+    depends_on:
+      - server
+    restart: unless-stopped
+    network_mode: host
+
+volumes:
+  infrapilot-data:
