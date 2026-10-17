@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ci-only-test-secret-key-not-for-production-use
     strategy:
       matrix:
         python-version: ["3.11"]

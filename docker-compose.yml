@@ -7,7 +7,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=sqlite:///./infrapilot.db
-      - SECRET_KEY=production-secret-key-change-me
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY (min 32 chars) in .env}
     volumes:
       - infrapilot-data:/app/data
     restart: unless-stopped
