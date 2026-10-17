@@ -15,11 +15,11 @@
 | Category | Capabilities |
 |----------|-------------|
 | **📊 System Monitoring** | CPU, RAM, disk, network I/O, process monitoring via lightweight agent |
-| **🔔 Alerting** | Configurable thresholds, Telegram/email notifications, alert history |
+| **🔔 Alerting** | Configurable thresholds and alert history (Telegram/email notification settings exist in config, sending is **planned**) |
 | **👥 User Management** | Role-based access (admin, viewer, operator), JWT authentication |
 | **💻 REST API** | FastAPI with auto-generated OpenAPI docs, pagination, filtering |
 | **🐳 Docker Ready** | Docker Compose for server + agent deployment |
-| **🧪 Testing** | Comprehensive test suite (pytest), CI/CD via GitHub Actions |
+| **🧪 Testing** | Agent unit tests (pytest) and lint/import checks in GitHub Actions |
 | **📈 Dashboard** | Web-based monitoring dashboard with real-time updates |
 
 ## Architecture
@@ -29,8 +29,8 @@
 │  Agent 1    │────▶│              │     │   Web UI     │
 │ (systemd)   │     │  FastAPI     │◀────│  (Browser)   │
 ├─────────────┤     │  Server      │     └──────────────┘
-│  Agent 2    │────▶│  + Postgres  │
-│ (Docker)    │     │  + Redis     │     ┌──────────────┐
+│  Agent 2    │────▶│  + SQLite    │
+│ (Docker)    │     │              │     ┌──────────────┐
 ├─────────────┤     │              │────▶│  Telegram    │
 │  Agent N    │────▶│              │     │  Alerts      │
 └─────────────┘     └──────────────┘     └──────────────┘
@@ -54,10 +54,10 @@ pip install -r requirements.txt
 ### 2. Start the Server
 
 ```bash
-# With Docker (recommended)
+# With Docker (recommended) — requires SECRET_KEY in .env
 docker compose up -d
 
-# Or manually
+# Or manually (set SECRET_KEY in .env first — it is required)
 cp .env.example .env
 uvicorn server.main:app --reload --port 8000
 ```
@@ -80,10 +80,13 @@ http://localhost:8000/dashboard    # Web UI
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/login` | Get JWT token |
+| POST | `/api/auth/setup` | Create the first admin user |
 | GET | `/api/systems` | List monitored systems |
 | GET | `/api/systems/{id}/metrics` | Get system metrics |
 | POST | `/api/metrics/ingest` | Submit metrics (agent) |
 | GET | `/api/alerts` | List alerts |
+| POST | `/api/alerts/{id}/acknowledge` | Acknowledge an alert |
+| GET | `/api/dashboard/summary` | Dashboard summary |
 | POST | `/api/alerts/config` | Configure alert rules |
 | GET | `/api/users` | Manage users (admin) |
 
@@ -93,15 +96,16 @@ All settings via `.env` file:
 
 ```env
 # Server
-SECRET_KEY=change-me-in-production
+SECRET_KEY=            # required, min 32 chars, no default
 DATABASE_URL=sqlite:///./infrapilot.db
-# or: DATABASE_URL=postgresql://user:pass@db:5432/infrapilot
 
-# Alerts
+# Alert thresholds
+ALERT_CPU_THRESHOLD=80
+ALERT_MEMORY_THRESHOLD=85
+ALERT_DISK_THRESHOLD=90
+# Notification settings (planned — not sent yet)
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
-SMTP_SERVER=
-SMTP_USER=
 
 # Agent
 AGENT_NAME=production-server-1
@@ -111,46 +115,39 @@ COLLECT_INTERVAL=30
 ## Deployment
 
 ```bash
-# Production with Docker
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
-# With systemd
-sudo cp scripts/infrapilot-agent.service /etc/systemd/system/
-sudo systemctl enable infrapilot-agent
-sudo systemctl start infrapilot-agent
+docker compose up -d   # server + agent (SQLite volume)
 ```
+
+A production compose override and a systemd unit for the agent are **planned**.
 
 ## Project Structure
 
 ```
 infrapilot/
 ├── agent/              # Lightweight monitoring agent
-│   ├── collector.py    # System metrics collector (psutil)
-│   ├── config.py       # Agent configuration
-│   └── sender.py       # HTTP metrics sender
+│   └── collector.py    # Metrics collector (psutil) + HTTP sender
 ├── server/             # Central FastAPI server
 │   ├── main.py         # App entry point
 │   ├── models.py       # SQLAlchemy models
 │   ├── auth.py         # JWT authentication
-│   ├── database.py     # DB connection
+│   ├── database.py     # DB connection (SQLite by default)
+│   ├── config.py       # Settings (env / .env)
 │   └── routers/        # API endpoints
 ├── dashboard/          # Web UI
-├── scripts/            # Deployment scripts
-├── tests/              # Test suite
+├── tests/              # Agent tests
 └── docker-compose.yml  # Container orchestration
 ```
 
 ## Why InfraPilot
 
-✅ **Enterprise-ready** — JWT auth, role-based access, structured logging  
+✅ **Secure defaults** — JWT auth, role-based access, required SECRET_KEY  
 ✅ **Production monitoring** — Real metrics, not simulations  
-✅ **Extensible** — Plugin architecture for custom collectors  
-✅ **Well-documented** — OpenAPI, README, architecture docs  
-✅ **Tested** — Comprehensive test suite with CI/CD
+✅ **Documented** — auto-generated OpenAPI docs  
+✅ **CI** — lint, tests and import checks on every push
 
 ## License
 
-MIT © Aria Tajeri
+MIT — see [LICENSE](LICENSE).
 
 ---
 

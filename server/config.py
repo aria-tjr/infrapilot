@@ -1,10 +1,12 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
     # Security
-    secret_key: str = "dev-secret-key-change-in-production"
+    # Required: set SECRET_KEY in the environment or .env (no insecure default).
+    secret_key: str = Field(..., min_length=32)
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 480
 
